@@ -267,8 +267,11 @@ export function TubeSinger() {
             Tempo and key are adjustable. Everything runs in your browser.
           </p>
           <div className="mt-3 flex flex-wrap gap-4 text-sm">
-            <Link to="/write" className="text-brass hover:underline">
-              Write → Sing (text-to-singing)
+            <Link to="/pipeline" className="text-brass hover:underline">
+              Pipeline (FIG 1.1)
+            </Link>
+            <Link to="/write" className="text-muted hover:text-brass">
+              Write → Sing
             </Link>
             <Link to="/studio" className="text-muted hover:text-brass">
               Consent studio
