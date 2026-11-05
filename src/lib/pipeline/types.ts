@@ -51,8 +51,6 @@ export type PipelineCombo = {
   svc?: string;
   vocoder?: string;
   reverb_send?: "none" | "on";
-  /** Vocal Atmos FDN preset (PVC glue) when reverb_send is on */
-  atmos_preset?: "intimate_vocal" | "aclass_air" | "immersive_cloud" | "wide_mod";
   buffer_samples?: 64 | 128 | 256;
 };
 

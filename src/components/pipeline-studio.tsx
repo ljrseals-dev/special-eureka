@@ -25,10 +25,7 @@ const STAGE_ORDER: StageReport["stage"][] = [
 export function PipelineStudio() {
   const [plan, setPlan] = useState<"A" | "B">("A");
   const [lyrics, setLyrics] = useState(DEFAULT_LYRICS);
-  const [reverb, setReverb] = useState<"none" | "on">("on");
-  const [atmosPreset, setAtmosPreset] = useState<
-    "intimate_vocal" | "aclass_air" | "immersive_cloud" | "wide_mod"
-  >("intimate_vocal");
+  const [reverb, setReverb] = useState<"none" | "on">("none");
   const [keyRoot, setKeyRoot] = useState(0);
   const [scale, setScale] = useState("major");
   const [busy, setBusy] = useState(false);
@@ -51,10 +48,9 @@ export function PipelineStudio() {
       svc: "rvc",
       vocoder: "default",
       reverb_send: reverb,
-      atmos_preset: atmosPreset,
       buffer_samples: 128,
     }),
-    [plan, reverb, atmosPreset, keyRoot, scale],
+    [plan, reverb, keyRoot, scale],
   );
 
   const run = useCallback(() => {
@@ -200,37 +196,14 @@ export function PipelineStudio() {
             </p>
           )}
 
-          <label className="mb-2 flex items-center gap-2 text-sm text-fg">
+          <label className="mb-4 flex items-center gap-2 text-sm text-fg">
             <input
               type="checkbox"
               checked={reverb === "on"}
               onChange={(e) => setReverb(e.target.checked ? "on" : "none")}
             />
-            Vocal Atmos reverb send (last stage · audience only · PVC glue)
+            Reverb send (last stage · audience only)
           </label>
-          {reverb === "on" && (
-            <label className="mb-4 block text-sm">
-              <span className="text-muted">Atmos preset</span>
-              <select
-                value={atmosPreset}
-                onChange={(e) =>
-                  setAtmosPreset(
-                    e.target.value as
-                      | "intimate_vocal"
-                      | "aclass_air"
-                      | "immersive_cloud"
-                      | "wide_mod",
-                  )
-                }
-                className="mt-1 w-full rounded-lg border border-line bg-raised px-2 py-1.5 text-fg"
-              >
-                <option value="intimate_vocal">Intimate Vocal</option>
-                <option value="aclass_air">A-Class Air</option>
-                <option value="immersive_cloud">Immersive Cloud</option>
-                <option value="wide_mod">Wide MOD</option>
-              </select>
-            </label>
-          )}
 
           <button
             type="button"

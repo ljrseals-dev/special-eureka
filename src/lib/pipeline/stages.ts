@@ -6,11 +6,6 @@ import { snapMidi, type ScaleName } from "@/lib/text-to-sing/scales";
 import { g2pLine } from "@/lib/text-to-sing/g2p";
 import { assignNotes, planLyrics } from "@/lib/text-to-sing/melody";
 import { render, BASE_LEN } from "@/lib/tube-singer/tract";
-import {
-  processVocalAtmos,
-  VOCAL_ATMOS_FINGERPRINT,
-  type AtmosPreset,
-} from "./vocal-atmos";
 import type { StageResult } from "./types";
 
 function nowMs() {
@@ -125,23 +120,27 @@ export function stageVocoderDefault(
   };
 }
 
-/** Reverb send — LAST stage only (FIG 1.1 note 4). Vocal Atmos FDN (PVC glue). */
+/** Reverb send — LAST stage only (FIG 1.1 note 4). Simple schroeder-ish wet. */
 export function stageReverbSend(
   samples: Float32Array,
   rate: number,
   on: boolean,
-  preset: AtmosPreset = "intimate_vocal",
 ): StageResult<{ samples: Float32Array; rate: number }> {
   const t0 = nowMs();
   if (!on) {
     return { value: { samples, rate }, fingerprint: "none", ms: nowMs() - t0 };
   }
-  const out = processVocalAtmos(samples, rate, preset);
-  return {
-    value: { samples: out, rate },
-    fingerprint: VOCAL_ATMOS_FINGERPRINT,
-    ms: nowMs() - t0,
-  };
+  const out = new Float32Array(samples.length);
+  const delays = [Math.floor(0.029 * rate), Math.floor(0.037 * rate), Math.floor(0.043 * rate)];
+  const dec = 0.35;
+  for (let i = 0; i < samples.length; i++) {
+    let wet = 0;
+    for (const d of delays) {
+      if (i >= d) wet += out[i - d]! * dec;
+    }
+    out[i] = samples[i]! * 0.7 + wet * 0.3;
+  }
+  return { value: { samples: out, rate }, fingerprint: "simple_send:v1", ms: nowMs() - t0 };
 }
 
 /** Plan B SVC — not in browser zips */

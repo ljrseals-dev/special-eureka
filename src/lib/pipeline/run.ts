@@ -137,7 +137,10 @@ export function runPlanA(input: RunInput): PipelineOutput {
     stages.push(skipped("f0_snap", "off"));
   }
 
-  // 6. F0-CONDITIONED SYNTH (FIG 1.1)
+  // Plan A: SVC slot unused
+  stages.push(skipped("svc", "—"));
+
+  // 6. F0-CONDITIONED SYNTH
   const synthImpl = combo.synth ?? "tube_formant";
   let samples: Float32Array;
   let rate: number;
@@ -152,9 +155,6 @@ export function runPlanA(input: RunInput): PipelineOutput {
     stages.push(fail("synth", synthImpl, e instanceof Error ? e.message : String(e)));
     return finalize(combo, dry.value, null, sr, stages, fingerprints, stagesMs, notes, lyrics);
   }
-
-  // SVC is FIG 1.3 only — skipped on Plan A (matrix visibility)
-  stages.push(skipped("svc", "plan_A"));
 
   // 7. VOCODER
   const vocImpl = combo.vocoder ?? "default";
@@ -171,25 +171,19 @@ export function runPlanA(input: RunInput): PipelineOutput {
     return finalize(combo, dry.value, null, sr, stages, fingerprints, stagesMs, notes, lyrics);
   }
 
-  // 8. REVERB SEND — last only; Vocal Atmos FDN glue (FIG 1.1 note 4 / Rev C)
+  // 8. REVERB SEND — last only; audience path (FIG Rev C: not on dry monitor)
   const revOn = (combo.reverb_send ?? "none") === "on";
-  const atmosPreset = combo.atmos_preset ?? "intimate_vocal";
   try {
-    const rev = stageReverbSend(samples, rate, revOn, atmosPreset);
+    const rev = stageReverbSend(samples, rate, revOn);
     stages.push(
-      ran(
-        "reverb_send",
-        revOn ? `vocal_atmos:${atmosPreset}` : "none",
-        rev.fingerprint,
-        rev.ms,
-      ),
+      ran("reverb_send", revOn ? "simple_send:v1" : "none", rev.fingerprint, rev.ms),
     );
     fingerprints.reverb_send = rev.fingerprint;
     stagesMs.reverb_send = rev.ms;
     samples = rev.value.samples;
     rate = rev.value.rate;
   } catch (e) {
-    stages.push(fail("reverb_send", "vocal_atmos", e instanceof Error ? e.message : String(e)));
+    stages.push(fail("reverb_send", "on", e instanceof Error ? e.message : String(e)));
   }
 
   return finalize(combo, dry.value, samples, rate, stages, fingerprints, stagesMs, notes, lyrics);
