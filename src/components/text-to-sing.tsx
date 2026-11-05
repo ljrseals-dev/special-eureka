@@ -10,8 +10,11 @@ import {
   type MelodyStyle,
   type SingProject,
 } from "@/lib/text-to-sing/melody";
-import { lyricAt, LYRIC_LINES, type Note } from "@/lib/tube-singer/song";
+import { SCALE_LABELS, type ScaleName } from "@/lib/text-to-sing/scales";
+import { lyricAt, type Note } from "@/lib/tube-singer/song";
 import { render, toWav, BASE_LEN, type RenderCfg } from "@/lib/tube-singer/tract";
+
+const KEY_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 
 const DEFAULT_LYRICS = `Daisy, Daisy, give me your answer do
 I'm half crazy all for the love of you
@@ -35,6 +38,9 @@ export function TextToSing() {
   const [bpm, setBpm] = useState(92);
   const [transpose, setTranspose] = useState(0);
   const [style, setStyle] = useState<MelodyStyle>("pop");
+  const [keyRoot, setKeyRoot] = useState(0);
+  const [scale, setScale] = useState<ScaleName>("major");
+  const [snapStrength, setSnapStrength] = useState(1);
   const [lines, setLines] = useState<LinePlan[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [busy, setBusy] = useState(false);
@@ -54,7 +60,14 @@ export function TextToSing() {
         setError("Add at least one line of lyrics.");
         return;
       }
-      const assigned = assignNotes(planned, { bpm, style, transpose });
+      const assigned = assignNotes(planned, {
+        bpm,
+        style,
+        transpose,
+        keyRoot,
+        scale,
+        snapStrength,
+      });
       setLines(planned);
       setNotes(assigned);
       setAudioUrl((prev) => {
@@ -64,7 +77,7 @@ export function TextToSing() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not analyze lyrics.");
     }
-  }, [lyrics, bpm, style, transpose]);
+  }, [lyrics, bpm, style, transpose, keyRoot, scale, snapStrength]);
 
   const doRender = useCallback(() => {
     if (!notes.length) {
@@ -147,6 +160,9 @@ export function TextToSing() {
       bpm,
       transpose,
       style,
+      keyRoot,
+      scale,
+      snapStrength,
     });
     const blob = new Blob([JSON.stringify(project, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -165,13 +181,13 @@ export function TextToSing() {
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-2 text-xs font-medium uppercase tracking-widest text-muted">
-            Text-to-singing · draft tool
+            Text-to-singing · scale-aware draft
           </p>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
             Write → Sing
           </h1>
           <p className="mt-2 max-w-xl text-sm text-muted">
-            Paste lyrics. We G2P, assign a draft melody, and sing them with the tube model.
+            Paste lyrics. G2P syllables, key/scale snap (melody intelligence), tube-model render.
             Fast draft — not a finished master. Your lyrics stay yours.
           </p>
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
@@ -281,9 +297,49 @@ export function TextToSing() {
                   <option value="ballad">Ballad</option>
                 </select>
               </label>
+              <label className="block text-sm">
+                <span className="text-muted">Key</span>
+                <select
+                  value={keyRoot}
+                  onChange={(e) => setKeyRoot(+e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-line bg-raised px-2 py-1.5 text-fg"
+                >
+                  {KEY_NAMES.map((name, i) => (
+                    <option key={name} value={i}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="text-muted">Scale</span>
+                <select
+                  value={scale}
+                  onChange={(e) => setScale(e.target.value as ScaleName)}
+                  className="mt-1 w-full rounded-lg border border-line bg-raised px-2 py-1.5 text-fg"
+                >
+                  {(Object.keys(SCALE_LABELS) as ScaleName[]).map((k) => (
+                    <option key={k} value={k}>
+                      {SCALE_LABELS[k]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="text-muted">Snap strength</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={snapStrength}
+                  onChange={(e) => setSnapStrength(Math.min(1, Math.max(0, +e.target.value || 0)))}
+                  className="mt-1 w-full rounded-lg border border-line bg-raised px-2 py-1.5 text-fg"
+                />
+              </label>
             </div>
             <p className="mt-2 text-xs text-muted">
-              After changing tempo, transpose, or style, click Analyze again, then Render.
+              Key + scale snap pitches (same idea as bench f0_snap). After changes, Analyze → Render.
             </p>
           </section>
 
